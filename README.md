@@ -28,12 +28,14 @@ Official Room/Map Keys
 ==========================================================
 
 === Hub ===
+
 nexus
 nexus_worlds
 public
 ch2_hub
 
 === Chapter 2 World Zones ===
+
 ch2_beach_0
 ch2_beach_1
 ch2_city_0
@@ -62,6 +64,7 @@ ch2_horror_9
 ch2_horror_10
 
 === Chapter 2 Dungeons ===
+
 ch2_dungeon_beach
 ch2_dungeon_snow
 ch2_dungeon_space
@@ -70,11 +73,13 @@ ch2_dungeon_fantasy0
 ch2_dungeon_fantasy1
 
 === Chapter 2 Legacy/Old Rooms ===
+
 ch2_old_blueHouse
 ch2_old_playground
 ch2_old_starterHouse
 
 === Chapter 2 Transitions ===
+
 ch2_transition_beach
 ch2_transition_city
 ch2_transition_city_space
@@ -86,6 +91,7 @@ ch2_transition_suburb_fantasy
 ch2_transition_suburb_snow
 
 === Minigames ===
+
 minigame_battleRoyale
 minigame_paintWars
 minigame_battleArena
