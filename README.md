@@ -34,6 +34,7 @@ nexus_worlds
 public
 ch2_hub
 
+
 === Chapter 2 World Zones ===
 
 ch2_beach_0
@@ -63,6 +64,7 @@ ch2_horror_8
 ch2_horror_9
 ch2_horror_10
 
+
 === Chapter 2 Dungeons ===
 
 ch2_dungeon_beach
@@ -72,11 +74,13 @@ ch2_dungeon_suburb
 ch2_dungeon_fantasy0
 ch2_dungeon_fantasy1
 
+
 === Chapter 2 Legacy/Old Rooms ===
 
 ch2_old_blueHouse
 ch2_old_playground
 ch2_old_starterHouse
+
 
 === Chapter 2 Transitions ===
 
@@ -89,6 +93,7 @@ ch2_transition_researchFacility
 ch2_transition_snow
 ch2_transition_suburb_fantasy
 ch2_transition_suburb_snow
+
 
 === Minigames ===
 
