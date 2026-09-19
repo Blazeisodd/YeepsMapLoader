@@ -23,14 +23,20 @@ public partial class YeepsMapLoader : EditorWindow
     string mobileCode = "";
 
     bool   isCommunityWorld = true;
+    bool   isOfficialWorld  = false;
     string worldName        = "";
     string accountID        = "";
     string manualRoomKey    = "";
     RoomNode[] browsedRooms = null;
     Vector2 browseScroll;
+    int    officialCategoryIndex = 0;
 
     string BuildRoomKey()
     {
+        if (isOfficialWorld)
+            return OFFICIAL_ROOMS.Length > 0 && OFFICIAL_ROOMS[officialCategoryIndex].rooms.Length > 0
+                ? OFFICIAL_ROOMS[officialCategoryIndex].rooms[0].key
+                : "nexus";
         string acc = accountID ?? "";
         string prefix = isCommunityWorld
             ? "c_" + (worldName ?? "").ToUpperInvariant()
@@ -138,6 +144,7 @@ public partial class YeepsMapLoader : EditorWindow
     {
         ("1x1x2_barbedWire", 0f, -0.5f, 0.5f),
         ("1x1x4_barbedWire", 0f, -1.5f, 1.5f),
+        ("techWeb_", 0f, 0f, -2f),
     };
 
     static readonly System.Text.RegularExpressions.Regex EMBEDDED_DIMS =
@@ -624,11 +631,21 @@ public partial class YeepsMapLoader : EditorWindow
         GUILayout.Space(10);
         GUILayout.Label("── Type ──", EditorStyles.miniLabel);
         GUILayout.BeginHorizontal();
-        if (GUILayout.Toggle(isCommunityWorld, "Community World?"))  isCommunityWorld = true;
-        if (GUILayout.Toggle(!isCommunityWorld, "Private World?"))   isCommunityWorld = false;
+        if (GUILayout.Toggle(isCommunityWorld && !isOfficialWorld, "Community World?"))
+        { isCommunityWorld = true; isOfficialWorld = false; }
+        if (GUILayout.Toggle(!isCommunityWorld && !isOfficialWorld, "Private World?"))
+        { isCommunityWorld = false; isOfficialWorld = false; }
+        if (GUILayout.Toggle(isOfficialWorld, "Official?"))
+        { isOfficialWorld = true; }
         GUILayout.EndHorizontal();
 
-        if (isCommunityWorld)
+        if (isOfficialWorld)
+        {
+            string[] categoryNames = new string[OFFICIAL_ROOMS.Length];
+            for (int i = 0; i < OFFICIAL_ROOMS.Length; i++) categoryNames[i] = OFFICIAL_ROOMS[i].category;
+            officialCategoryIndex = EditorGUILayout.Popup("Category", officialCategoryIndex, categoryNames);
+        }
+        else if (isCommunityWorld)
             worldName = EditorGUILayout.TextField("World Name", worldName);
 
         GUILayout.Space(10);
@@ -637,7 +654,14 @@ public partial class YeepsMapLoader : EditorWindow
 
         GUILayout.Space(10);
         GUILayout.Label("── Map ──", EditorStyles.miniLabel);
-        if (GUILayout.Button("Browse Rooms", GUILayout.Height(28))) BrowseRooms();
+        if (isOfficialWorld)
+        {
+            if (GUILayout.Button("Show Category Rooms", GUILayout.Height(28))) ShowOfficialCategory();
+        }
+        else
+        {
+            if (GUILayout.Button("Browse Rooms", GUILayout.Height(28))) BrowseRooms();
+        }
 
         if (browsedRooms != null && browsedRooms.Length > 0)
         {
@@ -739,6 +763,20 @@ public partial class YeepsMapLoader : EditorWindow
         }
     }
 
+    void ShowOfficialCategory()
+    {
+        if (officialCategoryIndex < 0 || officialCategoryIndex >= OFFICIAL_ROOMS.Length)
+        { status = "No category selected."; return; }
+
+        var (category, rooms) = OFFICIAL_ROOMS[officialCategoryIndex];
+        var list = new List<RoomNode>(rooms.Length);
+        foreach (var (key, label) in rooms)
+            list.Add(new RoomNode { roomKey = key, roomName = label });
+
+        browsedRooms = list.ToArray();
+        status = $"Showing {browsedRooms.Length} room(s) in '{category}'.";
+    }
+
     void FetchRoom()
     {
         if (string.IsNullOrEmpty(mobileCode)) { status = "Enter your mobile code first."; return; }
@@ -752,6 +790,11 @@ public partial class YeepsMapLoader : EditorWindow
 
         try
         {
+            if (isOfficialWorld)
+            {
+                FetchRoomByKey(BuildRoomKey());
+                return;
+            }
             if (isCommunityWorld && string.IsNullOrEmpty(worldName)) { status = "Enter a World Name first."; return; }
             if (!isCommunityWorld)
             {
@@ -794,13 +837,6 @@ public partial class YeepsMapLoader : EditorWindow
             if (resp == null || !resp.ok)
                 throw new System.Exception(!string.IsNullOrEmpty(resp?.error) ? resp.error : ("Unexpected response: " + respText));
 
-            if (resp.blocks == null || resp.blocks.Length == 0)
-            {
-                status = $"'{roomKey}' returned 0 blocks -- wrong room key?";
-                Debug.LogWarning("[YeepsMapLoader] " + status);
-                return;
-            }
-
             var blocks = new List<MapBlock>(resp.blocks?.Length ?? 0);
             if (resp.blocks != null)
                 foreach (var b in resp.blocks)
@@ -808,6 +844,13 @@ public partial class YeepsMapLoader : EditorWindow
                         name = b.name, x = b.x, y = b.y, z = b.z, sx = b.sx, sy = b.sy, sz = b.sz,
                         fwd = b.fwd, up = b.up, color = b.color, owner = b.owner,
                     });
+
+            if (blocks.Count == 0)
+            {
+                status = $"'{roomKey}' returned 0 blocks -- not loading.";
+                Debug.LogWarning("[YeepsMapLoader] " + status);
+                return;
+            }
 
             WriteBlocksCsv(blocks.ToArray(), csvPath);
 
@@ -963,8 +1006,10 @@ public partial class YeepsMapLoader : EditorWindow
 
         foreach (var (name, x, y, z, csx, csy, csz, fwd, up, colorName, ownerName) in blocks)
         {
+            string prefabLookupName = name.StartsWith("techWeb_") ? "techWeb" : name;
+
             string prefabPath;
-            if (!index.TryGetValue(name, out prefabPath))
+            if (!index.TryGetValue(prefabLookupName, out prefabPath))
             {
                 missing[name] = missing.ContainsKey(name) ? missing[name] + 1 : 1;
                 continue;
@@ -1022,7 +1067,12 @@ public partial class YeepsMapLoader : EditorWindow
 
             Vector3 posNudge = Vector3.zero;
             foreach (var (m, dx, dy, dz) in POSITION_NUDGE_CELLS)
-                if (name.Contains(m)) { posNudge = new Vector3(dx, dy, dz) * scale; break; }
+                if (name.Contains(m))
+                {
+                    Vector3 raw = new Vector3(dx, dy, dz) * scale;
+                    posNudge = m == "techWeb_" ? rot * raw : raw;
+                    break;
+                }
 
             pivot.transform.localPosition =
                 new Vector3(x * scale, y * scale, z * scale) + offset
