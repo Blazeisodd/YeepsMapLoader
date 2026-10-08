@@ -9,7 +9,7 @@ public partial class YeepsMapLoader : EditorWindow
 {
     const string ROOT_NAME = "YeepsMap";
 
-    const string SERVER_URL = "https://yeeps-proxy.onrender.com";
+    const string SERVER_URL = "https://proxy.yeeps-tools.org";
 
     string csvPath      = null;
     string roomInfoPath = null;
